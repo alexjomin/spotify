@@ -91,6 +91,8 @@ func play(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error playing album", http.StatusInternalServerError)
 		log.Println(err)
 	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func set(w http.ResponseWriter, r *http.Request) {
