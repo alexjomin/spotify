@@ -127,6 +127,7 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	client = auth.NewClient(token)
 	logged = true
+	fmt.Fprint(w, "Auth Ok")
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
