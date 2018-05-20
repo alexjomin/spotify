@@ -10,6 +10,7 @@ import (
 	"github.com/alexjomin/spotify/storage/bolt"
 	"github.com/gorilla/mux"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/sirupsen/logrus"
 	"github.com/zmb3/spotify"
 )
 
@@ -17,6 +18,8 @@ var auth spotify.Authenticator
 var client spotify.Client
 var s storage.Storage
 var logged bool
+var lastChannel chan string
+var lastValue string
 
 type config struct {
 	ClientID     string
@@ -44,9 +47,18 @@ func main() {
 		log.Fatal(err)
 	}
 
+	lastChannel = make(chan string)
+
+	go func() {
+		for value := range lastChannel {
+			lastValue = value
+		}
+	}()
+
 	r := mux.NewRouter()
 	r.HandleFunc("/callback", redirectHandler).Methods(http.MethodGet)
 	r.HandleFunc("/play/{id}", play).Methods(http.MethodGet)
+	r.HandleFunc("/set-last", setLast).Methods(http.MethodPut)
 	r.HandleFunc("/set/{id}", set).Methods(http.MethodPut)
 	r.HandleFunc("/login", login).Methods(http.MethodGet)
 	http.Handle("/", r)
@@ -68,6 +80,10 @@ func play(w http.ResponseWriter, r *http.Request) {
 
 	json.Unmarshal(p, &content)
 
+	go func(id string) {
+		lastChannel <- id
+	}(vars["id"])
+
 	if err != nil {
 		http.Error(w, "Can't find the request id", http.StatusNotFound)
 		return
@@ -75,7 +91,7 @@ func play(w http.ResponseWriter, r *http.Request) {
 
 	uri := spotify.URI(content.URI)
 
-	fmt.Println(uri)
+	logrus.WithField("uri", content.URI).Info("Play")
 
 	var deviceID spotify.ID
 	deviceID = spotify.ID(c.DeviceID)
@@ -96,7 +112,6 @@ func play(w http.ResponseWriter, r *http.Request) {
 }
 
 func set(w http.ResponseWriter, r *http.Request) {
-
 	vars := mux.Vars(r)
 
 	var p setPayload
@@ -117,6 +132,44 @@ func set(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Can't store data", http.StatusInternalServerError)
 		return
 	}
+
+	logrus.
+		WithField("key", lastValue).
+		WithField("uri", p.URI).
+		Info("Stored")
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func setLast(w http.ResponseWriter, r *http.Request) {
+	if lastValue == "" {
+		http.Error(w, "Not value set", http.StatusConflict)
+		return
+	}
+
+	var p setPayload
+
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", http.StatusBadRequest)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&p)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	err = s.Insert(string(lastValue), p)
+
+	if err != nil {
+		http.Error(w, "Can't store data", http.StatusInternalServerError)
+		return
+	}
+
+	logrus.
+		WithField("key", lastValue).
+		WithField("uri", p.URI).
+		Info("Stored")
 
 	w.WriteHeader(http.StatusNoContent)
 }

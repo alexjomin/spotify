@@ -32,10 +32,22 @@
   version = "v1.3.0"
 
 [[projects]]
+  name = "github.com/sirupsen/logrus"
+  packages = ["."]
+  revision = "c155da19408a8799da419ed3eeb0cb5db0ad5dbc"
+  version = "v1.0.5"
+
+[[projects]]
   branch = "master"
   name = "github.com/zmb3/spotify"
   packages = ["."]
   revision = "79deba8533f6a0e6545b3937667522d323aa6754"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/crypto"
+  packages = ["ssh/terminal"]
+  revision = "1a580b3eff7814fc9b40602fd35256c63b50f491"
 
 [[projects]]
   branch = "master"
@@ -58,7 +70,10 @@
 [[projects]]
   branch = "master"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "unix",
+    "windows"
+  ]
   revision = "7c87d13f8e835d2fb3a70a2912c811ed0c1d241b"
 
 [[projects]]
@@ -78,6 +93,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "575089fc91ae94c4989e2ad57b3eaab243b812e30b5ab759846c01e0207dc051"
+  inputs-digest = "c3007ad0e68d12eb1dd33294d84043f6bc1219754e50234f4d4e008d2939035a"
   solver-name = "gps-cdcl"
   solver-version = 1
