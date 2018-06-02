@@ -63,13 +63,14 @@ func main() {
 	r.HandleFunc("/login", login).Methods(http.MethodGet)
 	http.Handle("/", r)
 
+	log.Println("listen on", c.Port)
 	log.Fatal(http.ListenAndServe(c.Port, nil))
 }
 
 func play(w http.ResponseWriter, r *http.Request) {
 
 	if !logged {
-		http.Error(w, "You need to be logged !", http.StatusUnauthorized)
+		http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
 		return
 	}
 
@@ -80,6 +81,7 @@ func play(w http.ResponseWriter, r *http.Request) {
 
 	json.Unmarshal(p, &content)
 
+	// send last id to the buffer via a channel
 	go func(id string) {
 		lastChannel <- id
 	}(vars["id"])
@@ -102,6 +104,10 @@ func play(w http.ResponseWriter, r *http.Request) {
 	}
 
 	err = client.PlayOpt(&opt)
+
+	logrus.
+		WithField("uri", content.URI).
+		Info("Last uri value strored")
 
 	if err != nil {
 		http.Error(w, "Error playing album", http.StatusInternalServerError)
@@ -186,7 +192,11 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func login(w http.ResponseWriter, r *http.Request) {
-	auth = spotify.NewAuthenticator(c.RedirectURI, spotify.ScopeUserReadPrivate, spotify.ScopeUserReadPlaybackState, spotify.ScopeUserModifyPlaybackState)
+	auth = spotify.NewAuthenticator(c.RedirectURI,
+		spotify.ScopeUserReadPrivate,
+		spotify.ScopeUserReadPlaybackState,
+		spotify.ScopeUserModifyPlaybackState)
+
 	auth.SetAuthInfo(c.ClientID, c.ClientSecret)
 	url := auth.AuthURL("")
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
